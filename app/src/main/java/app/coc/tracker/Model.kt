@@ -7,7 +7,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class Group(val label: String) { BUILDER("Builders"), RESEARCH("Research"), BASE("Builder base") }
+enum class Group(val label: String) {
+    BUILDER("Builders"), RESEARCH("Research"), BUILDER_HALL("Builder Hall"), PET("Pets"), HELPER("Helpers"), SUPER_OR_EVENT("Other");
+
+    companion object {
+        /** Only upgrade categories appear in the app and widget. */
+        val display = listOf(BUILDER, RESEARCH, PET, BUILDER_HALL)
+    }
+}
 
 /** pot: 1 = Builder Potion applies, 2 = Research Potion applies, 0 = neither. rem = seconds left at export time. */
 data class Item(val id: Long, val name: String, val lvl: Int, val g: Group, val rem: Long, val pot: Int)
@@ -89,7 +96,7 @@ data class State(
                 val x = a.getJSONObject(it)
                 Item(x.getLong("id"), x.getString("n"), x.getInt("l"), Group.values()[x.getInt("g")], x.getLong("r"), x.getInt("p"))
             }
-            return State(o.getLong("ts"), items, o.getLong("bEnd"), o.getLong("rEnd"), rw(o.getJSONArray("bMan")), rw(o.getJSONArray("rMan")))
+            return State(o.getLong("ts"), items, o.getLong("bEnd"), o.getLong("rEnd"), rw(o.getJSONArray("bMan")), rw(o.getJSONArray("rMan")), )
         }
 
         private fun rw(a: JSONArray): List<Pair<Long, Long>> =
@@ -114,35 +121,66 @@ object Names {
     }
 }
 
+object ItemCategorizer {
+    private val builderHallBuildings = setOf(1000063L, 1000065L, 1000078L, 1000080L, 1000081L, 1000082L)
+    private val builderHallHeroes = setOf(28000003L, 28000005L)
+    private val builderHallTroops = setOf(4000070L, 4000106L)
+    private val superEventIds = setOf(
+        1000083L,
+        4000026L, 4000027L, 4000028L, 4000029L, 4000055L, 4000056L, 4000057L,
+        4000063L, 4000064L, 4000066L, 4000076L, 4000080L, 4000081L, 4000083L,
+        4000084L, 4000098L, 4000147L,
+        4000030L, 4000045L, 4000047L, 4000048L, 4000050L, 4000061L, 4000067L,
+        4000072L, 4000094L, 4000101L, 4000102L, 4000103L, 4000104L, 4000118L,
+        4000119L, 4000120L, 4000121L, 4000122L, 4000125L, 4000130L, 4000136L,
+        4000142L, 4000156L, 4000157L, 4000158L, 4000159L, 4000167L, 4000185L,
+        4000190L, 4000194L, 26000006L, 26000073L
+    )
+
+    fun categorize(id: Long): Group = when {
+        id in 1000033L..1000058L || id in builderHallBuildings ||
+            id in 12000010L..12000014L || id in builderHallHeroes ||
+            id in 4000031L..4000042L || id in builderHallTroops -> Group.BUILDER_HALL
+        id in superEventIds -> Group.SUPER_OR_EVENT
+        id in 93000000L..93999999L -> Group.HELPER
+        id in 73000000L..73999999L -> Group.PET
+        id / 1_000_000L in setOf(1L, 12L, 28L, 102L, 103L, 107L) -> Group.BUILDER
+        id / 1_000_000L in setOf(4L, 26L) -> Group.RESEARCH
+        else -> Group.SUPER_OR_EVENT
+    }
+
+}
+
 object Parser {
-    /** Reads the in-game "Data Export" JSON. Returns null if the text is not an export. */
+    /** Parses active upgrade timers; category is derived from the item ID and export source. */
     fun parse(text: String, names: Map<String, String>): State? {
         val o = try { JSONObject(text.trim()) } catch (e: Exception) { return null }
         val ts = o.optLong("timestamp", 0)
         if (ts == 0L || !o.has("buildings")) return null
         val items = ArrayList<Item>()
-        fun scan(key: String, g: Group, pot: Int) {
+        fun scan(key: String, potion: Int) {
             val a = o.optJSONArray(key) ?: return
             for (i in 0 until a.length()) {
                 val x = a.optJSONObject(i) ?: continue
-                val t = x.optLong("timer", 0)
-                if (t <= 0) continue
+                val remaining = x.optLong("timer", 0)
+                if (remaining <= 0) continue
                 val id = x.optLong("data", 0)
-                items.add(Item(id, names[id.toString()] ?: "#$id", x.optInt("lvl", 0), g, t, pot))
+                val group = if (key.endsWith("2")) Group.BUILDER_HALL else ItemCategorizer.categorize(id)
+                if (group == Group.HELPER || group == Group.SUPER_OR_EVENT) continue
+                val potion = when (group) {
+                    Group.BUILDER -> 1
+                    Group.RESEARCH -> 2
+                    else -> 0
+                }
+                items.add(Item(id, names[id.toString()] ?: "#$id", x.optInt("lvl", 0), group, remaining, potion))
             }
         }
-        scan("buildings", Group.BUILDER, 1)
-        scan("heroes", Group.BUILDER, 1)
-        scan("units", Group.RESEARCH, 2)
-        scan("siege_machines", Group.RESEARCH, 2)
-        scan("spells", Group.RESEARCH, 2)
-        scan("guardians", Group.RESEARCH, 2)
-        scan("pets", Group.RESEARCH, 0)
-        scan("buildings2", Group.BASE, 0)
-        scan("units2", Group.BASE, 0)
-        scan("heroes2", Group.BASE, 0)
-        val b = o.optJSONObject("boosts")
-        return State(ts, items, ts + (b?.optLong("builder_boost", 0) ?: 0L), ts + (b?.optLong("research_boost", 0) ?: 0L))
+        listOf("buildings", "traps", "heroes", "guardians").forEach { scan(it, 1) }
+        listOf("units", "siege_machines", "spells").forEach { scan(it, 2) }
+        scan("pets", 0)
+        listOf("buildings2", "traps2", "heroes2", "units2").forEach { scan(it, 0) }
+        val boosts = o.optJSONObject("boosts")
+        return State(ts, items, ts + (boosts?.optLong("builder_boost", 0) ?: 0L), ts + (boosts?.optLong("research_boost", 0) ?: 0L))
     }
 }
 

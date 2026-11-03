@@ -53,7 +53,9 @@ private val Dim = Color(0xFF8E89A6)
 private fun accent(g: Group) = when (g) {
     Group.BUILDER -> Color(0xFFF2C14E)
     Group.RESEARCH -> Color(0xFFD98BF0)
-    Group.BASE -> Color(0xFF7FB2E5)
+    Group.BUILDER_HALL -> Color(0xFF7FB2E5)
+    Group.PET -> Color(0xFF6FD3C0)
+    Group.HELPER, Group.SUPER_OR_EVENT -> Color(0xFF8E89A6)
 }
 
 class MainActivity : ComponentActivity() {
@@ -111,7 +113,7 @@ fun Screen(version: Int) {
                 )
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)) {
-                    for (g in Group.values()) {
+                    for (g in Group.display) {
                         val rows = cur.items.filter { it.g == g }.sortedBy { cur.endOf(it) }
                         if (rows.isEmpty()) continue
                         item { Text(g.label, color = Dim, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 14.dp, bottom = 2.dp)) }

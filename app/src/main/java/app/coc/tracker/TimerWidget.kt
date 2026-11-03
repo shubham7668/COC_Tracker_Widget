@@ -24,7 +24,9 @@ class TimerWidget : AppWidgetProvider() {
         private fun color(g: Group): Int = when (g) {
             Group.BUILDER -> 0xFFF2C14E
             Group.RESEARCH -> 0xFFD98BF0
-            Group.BASE -> 0xFF7FB2E5
+            Group.BUILDER_HALL -> 0xFF7FB2E5
+            Group.PET -> 0xFF6FD3C0
+            Group.HELPER, Group.SUPER_OR_EVENT -> 0xFF8E89A6
         }.toInt()
 
         private fun build(c: Context): RemoteViews {
@@ -38,7 +40,7 @@ class TimerWidget : AppWidgetProvider() {
             val nowS = System.currentTimeMillis() / 1000
             val el = SystemClock.elapsedRealtime()
 
-            if (st == null || st.items.none { it.g != Group.BASE }) {
+            if (st == null || st.items.isEmpty()) {
                 val row = RemoteViews(c.packageName, R.layout.widget_row)
                 row.setTextViewText(R.id.name, if (st == null) "Copy your export, then tap Import" else "Nothing upgrading")
                 row.setViewVisibility(R.id.time, View.GONE)
@@ -47,7 +49,7 @@ class TimerWidget : AppWidgetProvider() {
                 return rv
             }
 
-            for (g in listOf(Group.BUILDER, Group.RESEARCH)) {
+            for (g in Group.display) {
                 val rows = st.items.filter { it.g == g }.sortedBy { st.endOf(it) }
                 if (rows.isEmpty()) continue
                 val sec = RemoteViews(c.packageName, R.layout.widget_section)
@@ -58,10 +60,16 @@ class TimerWidget : AppWidgetProvider() {
                     row.setTextViewText(R.id.name, item.name)
                     row.setTextViewText(R.id.lvl, "Lv ${item.lvl + 1}")
                     val end = st.endOf(item)
-                    if (end <= nowS) {
+                    val left = end - nowS
+                    if (left <= 0) {
                         row.setViewVisibility(R.id.time, View.GONE)
                         row.setViewVisibility(R.id.done, View.VISIBLE)
                         row.setTextColor(R.id.done, color(g))
+                    } else if (left >= 86400) {
+                        row.setViewVisibility(R.id.time, View.GONE)
+                        row.setViewVisibility(R.id.days, View.VISIBLE)
+                        row.setTextViewText(R.id.days, "${left / 86400}d ${left % 86400 / 3600}h")
+                        row.setTextColor(R.id.days, color(g))
                     } else {
                         row.setChronometerCountDown(R.id.time, true)
                         row.setChronometer(R.id.time, el + (end - nowS) * 1000, null, true)

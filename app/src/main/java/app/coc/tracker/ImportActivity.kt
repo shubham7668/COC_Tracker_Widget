@@ -15,7 +15,7 @@ class ImportActivity : Activity() {
         val cm = getSystemService(ClipboardManager::class.java)
         val clip = cm.primaryClip
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).coerceToText(this).toString() else ""
-        val st = Parser.parse(text, Names.get(this))
+        val st = Parser.parse(text, Names.get(this), Store.load(this))
         if (st == null) {
             Toast.makeText(this, "Clipboard doesn't hold a Clash of Clans export", Toast.LENGTH_LONG).show()
         } else {

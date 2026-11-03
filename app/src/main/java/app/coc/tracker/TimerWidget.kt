@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 
@@ -37,6 +38,7 @@ class TimerWidget : AppWidgetProvider() {
 
             val st = Store.load(c)
             val nowS = System.currentTimeMillis() / 1000
+            val elapsed = SystemClock.elapsedRealtime()
 
             if (st == null || st.items.isEmpty()) {
                 val row = RemoteViews(c.packageName, R.layout.widget_row)
@@ -61,17 +63,21 @@ class TimerWidget : AppWidgetProvider() {
                     val left = end - nowS
                     if (left <= 0) {
                         row.setViewVisibility(R.id.time, View.GONE)
+                        row.setViewVisibility(R.id.days, View.GONE)
                         row.setViewVisibility(R.id.done, View.VISIBLE)
                         row.setTextColor(R.id.done, color(g))
                     } else if (left >= 86400) {
                         row.setViewVisibility(R.id.time, View.GONE)
+                        row.setViewVisibility(R.id.done, View.GONE)
                         row.setViewVisibility(R.id.days, View.VISIBLE)
                         row.setTextViewText(R.id.days, "${left / 86400}d ${left % 86400 / 3600}h")
                         row.setTextColor(R.id.days, color(g))
                     } else {
+                        row.setViewVisibility(R.id.done, View.GONE)
                         row.setViewVisibility(R.id.days, View.GONE)
                         row.setViewVisibility(R.id.time, View.VISIBLE)
-                        row.setTextViewText(R.id.time, dur(left))
+                        row.setChronometerCountDown(R.id.time, true)
+                        row.setChronometer(R.id.time, elapsed + left * 1000L, null, true)
                         row.setTextColor(R.id.time, color(g))
                     }
                     rv.addView(R.id.list, row)

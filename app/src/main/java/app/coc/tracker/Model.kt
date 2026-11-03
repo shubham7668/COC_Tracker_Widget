@@ -153,7 +153,7 @@ object ItemCategorizer {
 
 object Parser {
     /** Parses active upgrade timers; category is derived from the item ID and export source. */
-    fun parse(text: String, names: Map<String, String>): State? {
+    fun parse(text: String, names: Map<String, String>, previous: State? = null): State? {
         val o = try { JSONObject(text.trim()) } catch (e: Exception) { return null }
         val ts = o.optLong("timestamp", 0)
         if (ts == 0L || !o.has("buildings")) return null
@@ -180,7 +180,16 @@ object Parser {
         scan("pets", 0)
         listOf("buildings2", "traps2", "heroes2", "units2").forEach { scan(it, 0) }
         val boosts = o.optJSONObject("boosts")
-        return State(ts, items, ts + (boosts?.optLong("builder_boost", 0) ?: 0L), ts + (boosts?.optLong("research_boost", 0) ?: 0L))
+        val currentManualBuilderWindows = previous?.bMan.orEmpty().filter { it.second > ts }
+        val currentManualResearchWindows = previous?.rMan.orEmpty().filter { it.second > ts }
+        return State(
+            ts = ts,
+            items = items,
+            bEnd = ts + (boosts?.optLong("builder_boost", 0) ?: 0L),
+            rEnd = ts + (boosts?.let { it.optLong("lab_boost", it.optLong("research_boost", 0)) } ?: 0L),
+            bMan = currentManualBuilderWindows,
+            rMan = currentManualResearchWindows,
+        )
     }
 }
 

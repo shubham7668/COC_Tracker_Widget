@@ -20,6 +20,18 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
 }
+val copyDebugApk = tasks.register("copyDebugApk") {
+    doLast {
+        val apk = layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile
+        val namedApk = layout.buildDirectory.file("outputs/apk/debug/COC-Timers.apk").get().asFile
+        if (apk.exists()) apk.copyTo(namedApk, overwrite = true)
+    }
+}
+
+tasks.configureEach {
+    if (name == "assembleDebug") finalizedBy(copyDebugApk)
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.material3:material3")

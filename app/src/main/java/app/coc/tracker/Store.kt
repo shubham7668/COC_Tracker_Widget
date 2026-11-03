@@ -15,6 +15,7 @@ object Store {
     /** Save imported timers and refresh the widget. */
     fun commit(c: Context, s: State) {
         sp(c).edit().putString("state", s.toJson().toString()).apply()
+        Alarms.schedule(c, s)
         TimerWidget.refresh(c)
     }
 }

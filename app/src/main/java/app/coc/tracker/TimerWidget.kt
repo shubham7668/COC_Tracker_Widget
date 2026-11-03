@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 
@@ -38,7 +37,6 @@ class TimerWidget : AppWidgetProvider() {
 
             val st = Store.load(c)
             val nowS = System.currentTimeMillis() / 1000
-            val el = SystemClock.elapsedRealtime()
 
             if (st == null || st.items.isEmpty()) {
                 val row = RemoteViews(c.packageName, R.layout.widget_row)
@@ -71,8 +69,9 @@ class TimerWidget : AppWidgetProvider() {
                         row.setTextViewText(R.id.days, "${left / 86400}d ${left % 86400 / 3600}h")
                         row.setTextColor(R.id.days, color(g))
                     } else {
-                        row.setChronometerCountDown(R.id.time, true)
-                        row.setChronometer(R.id.time, el + (end - nowS) * 1000, null, true)
+                        row.setViewVisibility(R.id.days, View.GONE)
+                        row.setViewVisibility(R.id.time, View.VISIBLE)
+                        row.setTextViewText(R.id.time, dur(left))
                         row.setTextColor(R.id.time, color(g))
                     }
                     rv.addView(R.id.list, row)

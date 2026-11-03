@@ -15,8 +15,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
       - run: gradle assembleDebug --no-daemon
+      - name: Rename APK for release
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/COC-Timers.apk
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Latest APK
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/debug/COC-Timers.apk

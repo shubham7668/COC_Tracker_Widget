@@ -5,7 +5,7 @@ Minimal Android widget and app for Clash of Clans upgrade timers. Manual import,
 ## Get the APK (no Android Studio needed)
 1. Create a GitHub repo and push this folder to the `main` branch.
 2. Open the repo's **Actions** tab. The "Build APK" run takes about 4 minutes.
-3. On your phone, open the repo's **Releases** page, download `app-debug.apk` from "Latest APK", install it (allow "install unknown apps" once).
+3. On your phone, open the repo's **Releases** page, download `COC-Timers.apk` from "Latest APK", install it (allow "install unknown apps" once).
 4. Share that Releases link with anyone who wants it.
 
 ## Use
